@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jms="http://www.springframework.org/schema/jms"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context 
+                           http://www.springframework.org/schema/context/spring-context.xsd
+                           http://www.springframework.org/schema/jms 
+                           http://www.springframework.org/schema/jms/spring-jms-4.0.xsd">
+                           
+                           
+   <context:property-placeholder location="classpath:main.properties" />   
+    <!--  <context:property-placeholder location="/resources/main.properties" /> --> 
+     <context:component-scan base-package="com.example.listener" /> 
+      <context:component-scan base-package="com.test.testspringjmsmq" /> 
+                           
+   
+	 <!-- WebSphere MQ Connection Factory -->
+	<bean id="mqIdsConnectionFactory" class="com.ibm.mq.jms.MQQueueConnectionFactory">
+		<property name="hostName">
+			<value>${queue_Idshostname}</value>
+		</property>
+		<property name="port">
+			<value>${queue_Idsport}</value>
+		</property>
+		<property name="queueManager">
+			<value>${queue_Idsmanager}</value>
+		</property>
+		<property name="transportType">
+			<value>1</value>
+		</property>
+	</bean>
+	
+	
+	<!-- JMS Queue Connection Factory -->
+	<bean id="jmsQueueIdsConnectionFactory"
+		class="org.springframework.jms.connection.SingleConnectionFactory">
+		<property name="targetConnectionFactory">
+			<ref bean="mqIdsConnectionFactory" />
+		</property>
+		 
+	</bean>
+	
+
+	<!-- JMS Destination Resolver -->
+	<bean id="jmsDestinationResolver"
+		class="org.springframework.jms.support.destination.DynamicDestinationResolver">
+	</bean>
+
+  
+	<!-- JMS Queue Template -->
+    <bean id="jmsQueueIdsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory">
+			<ref bean="jmsQueueIdsConnectionFactory" />
+		</property>
+	<!-- 	<property name="destinationResolver">
+			<ref bean="jmsDestinationResolver" />
+		</property> -->
+		<property name="defaultDestinationName">
+            <value>${RES.IDS.QUEUE}</value>
+        </property>
+		<property name="pubSubDomain">
+			<value>false</value>
+		</property>
+		<property name="receiveTimeout">
+			<value>20000</value>
+		</property>
+	</bean>  
+	
+   <bean id="simpleMessageListener" class="com.example.listener.TestMessageListener" />
+   
+   
+    <bean id="jmsContainer"
+        class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+        <property name="connectionFactory" ref="jmsQueueConnectionFactory" />
+        <property name="destinationName">
+            <value>${fromRtpQueue}</value>
+        </property>
+        <property name="messageListener" ref="simpleMessageListener" />
+        <property name="concurrentConsumers" value="2" />
+        <property name="maxConcurrentConsumers" value="3" />
+        <property name="idleTaskExecutionLimit" value="4" />
+        <property name="maxMessagesPerTask" value="4" />
+        <property name="receiveTimeout" value="5000" />
+        <property name="recoveryInterval" value="5000" />
+        <property name="sessionTransacted" value="true" />
+        <property name="transactionManager" ref="jmsTransActionManager" />
+    </bean>    
+	
+	</beans>
